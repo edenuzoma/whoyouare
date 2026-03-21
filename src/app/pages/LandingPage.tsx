@@ -7,20 +7,22 @@ import { LandingNavbar } from "../components/LandingNavbar";
 import { Footer } from "../components/Footer";
 import { toast } from "sonner";
 
-// Normalise URL — adds https:// if missing
+// Normalise URL — adds https:// if missing and lowercases the domain
 function normaliseUrl(raw: string): string {
   const trimmed = raw.trim();
   if (!trimmed) return "";
-  if (/^https?:\/\//i.test(trimmed)) return trimmed;
-  return `https://${trimmed}`;
+  const withProtocol = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+  // Lowercase only the domain part, preserve the username/path casing
+  return withProtocol.replace(/^(https?:\/\/[^/]+)/i, (match) => match.toLowerCase());
 }
 
+// Case-insensitive validation — accepts LinkedIn.com, LINKEDIN.COM, linkedin.com etc.
 function isValidLinkedIn(url: string): boolean {
-  return /^https?:\/\/(www\.)?linkedin\.com\/in\/[a-zA-Z0-9\-_%]+\/?$/.test(url.trim());
+  return /^https?:\/\/(www\.)?linkedin\.com\/in\/[a-zA-Z0-9\-_%]+\/?$/i.test(url.trim());
 }
 
 function isValidX(url: string): boolean {
-  return /^https?:\/\/(www\.)?(x\.com|twitter\.com)\/[a-zA-Z0-9_]+\/?$/.test(url.trim());
+  return /^https?:\/\/(www\.)?(x\.com|twitter\.com)\/[a-zA-Z0-9_]+\/?$/i.test(url.trim());
 }
 
 function extractFirstName(url: string): string {
