@@ -16,12 +16,14 @@ export function ProfileAnalysis() {
   const [copiedGeneral, setCopiedGeneral] = useState(false);
   const [copiedPersonal, setCopiedPersonal] = useState(false);
 
-  useEffect(() => {
-    // Always fetch fresh on every page load — no hasFetched lock
-    const socialUrl = localStorage.getItem("evata_social_url") || "";
-    const socialType = localStorage.getItem("evata_social_type") || "linkedin";
+  const socialUrl = localStorage.getItem("evata_social_url") || "";
+  const socialType = localStorage.getItem("evata_social_type") || "linkedin";
 
+  useEffect(() => {
+    // Re-run whenever the profile URL or name changes
     setLoading(true);
+    setProfileData(null);
+
     analyzeProfile(socialUrl, socialType)
       .then((data) => {
         setProfileData(data);
@@ -31,7 +33,7 @@ export function ProfileAnalysis() {
         console.error("Profile analysis error:", err);
         setLoading(false);
       });
-  }, []); // runs once per mount — fresh on every page load/refresh
+  }, [socialUrl, name]); // re-fetches when URL or name changes
 
   const copyToClipboard = (text: string, type: "general" | "personal") => {
     const ta = document.createElement("textarea");

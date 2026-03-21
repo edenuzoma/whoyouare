@@ -6,7 +6,6 @@ const GROQ_KEY = import.meta.env.VITE_GROQ_API_KEY;
 const DEEPSEEK_KEY = import.meta.env.VITE_DEEPSEEK_API_KEY;
 
 async function callAI(prompt: string, maxTokens = 1200): Promise<string> {
-  // Try Groq first — use the larger more capable model
   if (GROQ_KEY) {
     try {
       const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
@@ -20,7 +19,7 @@ async function callAI(prompt: string, maxTokens = 1200): Promise<string> {
           messages: [
             {
               role: "system",
-              content: "You are a behavioral psychologist. You ONLY output valid raw JSON objects. No markdown. No backticks. No explanation. No text before or after the JSON. Just the JSON object starting with { and ending with }.",
+              content: "You are a world-class behavioral psychologist. You write deeply personal, warm, insightful analyses. You ONLY output valid raw JSON objects. No markdown. No backticks. No explanation. No text before or after the JSON. Just the JSON object starting with { and ending with }.",
             },
             { role: "user", content: prompt },
           ],
@@ -33,10 +32,7 @@ async function callAI(prompt: string, maxTokens = 1200): Promise<string> {
       if (res.ok) {
         const data = await res.json();
         const text = data.choices?.[0]?.message?.content ?? "";
-        if (text) {
-          console.log("Groq response received, length:", text.length);
-          return text;
-        }
+        if (text) return text;
       } else {
         const errData = await res.json().catch(() => ({}));
         console.warn("Groq failed:", res.status, errData?.error?.message);
@@ -46,7 +42,6 @@ async function callAI(prompt: string, maxTokens = 1200): Promise<string> {
     }
   }
 
-  // Fallback: DeepSeek
   if (DEEPSEEK_KEY) {
     try {
       const res = await fetch("https://api.deepseek.com/chat/completions", {
@@ -60,7 +55,7 @@ async function callAI(prompt: string, maxTokens = 1200): Promise<string> {
           messages: [
             {
               role: "system",
-              content: "You are a behavioral psychologist. You ONLY output valid raw JSON objects. No markdown. No backticks. No explanation. Just the JSON.",
+              content: "You are a behavioral psychologist. You ONLY output valid raw JSON. No markdown. No backticks. No explanation.",
             },
             { role: "user", content: prompt },
           ],
@@ -73,9 +68,6 @@ async function callAI(prompt: string, maxTokens = 1200): Promise<string> {
         const data = await res.json();
         const text = data.choices?.[0]?.message?.content ?? "";
         if (text) return text;
-      } else {
-        const errText = await res.text();
-        console.warn("DeepSeek failed:", res.status, errText);
       }
     } catch (err) {
       console.warn("DeepSeek error:", err);
@@ -87,20 +79,17 @@ async function callAI(prompt: string, maxTokens = 1200): Promise<string> {
 
 function extractJSON<T>(raw: string, fallback: T): T {
   try {
-    // First try direct parse
     const direct = JSON.parse(raw.trim());
     if (direct && typeof direct === "object") return direct as T;
   } catch {}
 
   try {
-    // Strip markdown fences
     const stripped = raw.replace(/```json\s*/gi, "").replace(/```\s*/g, "").trim();
     const parsed = JSON.parse(stripped);
     if (parsed && typeof parsed === "object") return parsed as T;
   } catch {}
 
   try {
-    // Find first { to last }
     const start = raw.indexOf("{");
     const end = raw.lastIndexOf("}");
     if (start !== -1 && end !== -1 && end > start) {
@@ -109,7 +98,7 @@ function extractJSON<T>(raw: string, fallback: T): T {
     }
   } catch {}
 
-  console.error("All JSON parse attempts failed. Raw response:", raw.slice(0, 300));
+  console.error("All JSON parse attempts failed. Raw:", raw.slice(0, 300));
   return fallback;
 }
 
@@ -193,15 +182,18 @@ export async function analyzeProfile(profileUrl: string, profileType: string): P
 Profile URL: ${profileUrl}
 Person: ${firstName} (full name: ${fullName})
 
-Write EVERYTHING directly TO this person. Use "you" and "your" only. NEVER say "${firstName} is" or "he is" or "she is" or "this person". Always say "You are" or "You have".
+CRITICAL RULES:
+1. Write EVERYTHING directly TO this person. Use "you" and "your" only. NEVER say "${firstName} is" or "he is" or "she is" or "this person".
+2. The deepRead field must have REAL written paragraphs — not placeholder text. Write actual insights about this specific person based on their name and profile handle.
+3. Every bold statement in deepRead must be a real insightful sentence — for example: "**You have been building something real long before anyone noticed you.**" not "**Bold insight.**"
 
-Return a JSON object with exactly these fields. Keep all string values concise (1-3 sentences max):
+Return a JSON object with exactly these fields:
 
 {
-  "archetype": "unique 3-word archetype label that fits this specific person",
-  "deepRead": "paragraph 1 starting with **Bold insight TO them.** then 2 sentences using you/your.\\n\\nparagraph 2 starting with **Bold insight.** then 2 sentences using you/your.\\n\\nparagraph 3 starting with **Bold insight.** then 2 sentences using you/your.",
+  "archetype": "unique 3-word archetype that fits this specific person e.g. The Steady Flame",
+  "deepRead": "**Write a real bold insight about this specific person here — a surprising truth that feels personal.** Then write 2 warm sentences directly to them about their inner world using you and your.\\n\\n**Write a second real bold insight about how they uniquely show up in the world.** Then 2 sentences about what makes them genuinely different from others.\\n\\n**Write a third real bold insight looking forward at their potential.** Then 2 sentences about what they should trust in themselves going forward.",
   "traits": [
-    {"title": "unique trait name for this person", "score": 82, "headline": "short line starting with You", "detail": "1 sentence using you about this specific person"},
+    {"title": "unique trait name for this specific person", "score": 82, "headline": "short punchy line starting with You", "detail": "1 sentence using you that makes them say that is exactly me"},
     {"title": "unique trait name", "score": 76, "headline": "short line starting with You", "detail": "1 sentence using you"},
     {"title": "unique trait name", "score": 79, "headline": "short line starting with You", "detail": "1 sentence using you"},
     {"title": "unique trait name", "score": 85, "headline": "short line starting with You", "detail": "1 sentence using you"}
@@ -213,7 +205,7 @@ Return a JSON object with exactly these fields. Keep all string values concise (
     {"emoji": "🌊", "title": "unique power name", "description": "1 sentence starting with You"}
   ],
   "thingsToTry": [
-    {"emoji": "🌱", "title": "action title", "description": "1 sentence using you", "tip": "one concrete action"},
+    {"emoji": "🌱", "title": "action title", "description": "1 sentence using you", "tip": "one concrete action this week"},
     {"emoji": "📣", "title": "action title", "description": "1 sentence using you", "tip": "one concrete action"},
     {"emoji": "🤝", "title": "action title", "description": "1 sentence using you", "tip": "one concrete action"}
   ],
@@ -230,7 +222,6 @@ Return a JSON object with exactly these fields. Keep all string values concise (
   try {
     const raw = await callAI(prompt, 1200);
     const result = extractJSON<any>(raw, null);
-
     if (!result) return fallback;
 
     return {
