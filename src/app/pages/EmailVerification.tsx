@@ -44,7 +44,7 @@ export function EmailVerification() {
       const { data, error } = await supabase.auth.verifyOtp({
         email,
         token: verificationCode,
-        type: "magiclink",
+        type: "email",
       });
       if (error) throw error;
       localStorage.setItem("evata_user", JSON.stringify({ email, id: data.user?.id }));
